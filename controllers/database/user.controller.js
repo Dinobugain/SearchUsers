@@ -1,6 +1,6 @@
 const pool = require('../../services/database.service').pool
 const lodash =  require('lodash');
-
+const validateParams = ['first_name', 'last_name']
 class UserRepo {
     constructor(){}
     async findAll(){
@@ -18,16 +18,20 @@ class UserRepo {
         try{
             let sql = 'SELECT * FROM users WHERE '
             let count = 0
+            let arrParams = []
             const cleanedObject = lodash.pickBy(params, v => v !== 'undefined')
             for(let param in cleanedObject){
+                if(!validateParams.includes(param)) throw new Error('This param not supported')
+
                 count++
                 if(count != Object.keys(cleanedObject).length){
-                    sql += `${param} LIKE '%${params[param]}%' AND ` 
+                    sql += `${param} LIKE $${count} AND ` 
                 }else{
-                    sql += `${param} LIKE '%${params[param]}%'` 
+                    sql += `${param} LIKE $${count}` 
                 }
+                arrParams.push(`%${params[param]}%`)
             }
-            let res = await pool.query(sql)
+            let res = await pool.query(sql, arrParams)
             console.log(`Succes controllers => database => user.controller => findAllByParams: ${sql}`)
             return res
         }catch(e){

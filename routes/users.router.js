@@ -13,6 +13,7 @@ router.get('/get', async (req, res) =>{
         console.log('Succes routes => user.router => /get')
         return res.status(200).json({result:true, users:result.rows})
     }catch(e){
+        res.status(401).json({result:false, message: 'some Error'})
         throw new Error(`ERROR routes => users.router => /get: ${e}`)
     }
     

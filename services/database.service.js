@@ -20,21 +20,47 @@ class Database{
 
     databaseUpdate(){
         let self = this
-        axios.get('https://reqres.in/api/users').then(function(res){
+        axios.get('https://reqres.in/api/users').then(async (res) =>{
             for(let item of res.data.data){
-                self.pool.query(`
-                    INSERT INTO users(id, email, first_name, last_name, avatar) VALUES($1, $2, $3, $4, $5) 
-                    ON CONFLICT (id) DO UPDATE 
-                    SET email = $2, 
-                        first_name = $3, 
-                        last_name = $4, 
-                        avatar = $5
-                    RETURNING *`, Object.values(item), (err, res) => {
-                    if (err) throw new Error(`ERROR services => database.service => databaseUpdate: ${err}`)
-                    else console.log('SUCCESS services => database.service => databaseUpdate')
-                })
+                try{
+                    let result = await self.pool.query(`
+                        INSERT INTO users(id, email, first_name, last_name, avatar) VALUES($1, $2, $3, $4, $5) 
+                        ON CONFLICT (id) DO UPDATE 
+                        SET email = $2, 
+                            first_name = $3, 
+                            last_name = $4, 
+                            avatar = $5
+                        RETURNING *`, Object.values(item)
+                    )
+                }catch(err){
+                    throw new Error(`ERROR services => database.service => databaseUpdate: ${err}`)
+                }
             }
-           
+            console.log('SUCCESS services => database.service => databaseUpdate with page 1')
+            return res.data
+        }).then(async (value) =>{
+            if(value.page < value.total_pages){
+                for(let page=1; page < value.total_pages; page++){
+                    let res = await axios.get(`https://reqres.in/api/users?page=${page + 1}`)
+                    
+                    for(let item of res.data.data){
+                        try{
+                            let result = await self.pool.query(`
+                                INSERT INTO users(id, email, first_name, last_name, avatar) VALUES($1, $2, $3, $4, $5) 
+                                ON CONFLICT (id) DO UPDATE 
+                                SET email = $2, 
+                                    first_name = $3, 
+                                    last_name = $4, 
+                                    avatar = $5
+                                RETURNING *`, Object.values(item)
+                            )
+                        }catch{
+                            throw new Error(`ERROR services => database.service => databaseUpdate with page ${page+1}: ${err}`)
+                        }
+                    }
+                    console.log(`SUCCESS services => database.service => databaseUpdate with page ${page+1}`)
+                }
+            }
         })
     }
 
